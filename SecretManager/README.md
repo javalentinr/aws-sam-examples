@@ -12,7 +12,36 @@
 
 1. **Instalación de AWS Lambda Powertools**: Instalamos las bibliotecas de Powertools para Node.js (En el caso que no se tenga en el proyecto).
 
-2. **Modificación de `template.yaml`**: 
+2. **Modificación de  variables en `samconfig.ci.yaml`**: 
+ Para esto vamos al samconfig.ci.yaml de nuestro proyecto. 
+
+ En el tenemos variables de entorno en el cual nosotros necesitamos para poder obtener y enviar al template.yaml
+
+```yaml
+version: 0.1
+default:
+  build:
+    parameters:
+      cached: 'true'
+      parallel: 'true'
+  deploy:
+    parameters:
+      stack_name: {{StackName}}
+      capabilities: CAPABILITY_IAM
+      parameter_overrides:
+        - AuthStackName=besta-auth
+        - DBHost={{DBHost}}
+        - DBUser={{DBUser}}
+        - DBPassword={{DBPassword}}
+        - DBPort={{DBPort}}
+        - DBDatabase={{DBDatabase}}
+        - BucketName={{BucketName}}
+      image_repositories: []
+```
+
+Donde en los parameter_overrides son las variables de entorno y cual se pueden exportar y
+
+3. **Modificación de `template.yaml`**: 
  Para esto vamos al template.yaml de nuestro proyecto. 
  
 ## Archivo `template.yaml`
@@ -116,3 +145,26 @@ eliminará cuando se elimine la pila de CloudFormation.
 - port: Referencia a un parámetro llamado DBPort.
 
 - database: Referencia a un parámetro llamado DBDatabase.
+
+Teniendo esto en la seccion de  MyFunction es donde se declara la lambda y con el cual va una configuracion en este caso es esta 
+
+```yaml
+MyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs14.x
+      CodeUri: src/functions/myFunction/
+      Environment:
+        Variables:
+          SECRET_NAME: !Ref DatabaseConnectionSecret
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref DatabaseConnectionSecret
+
+```
